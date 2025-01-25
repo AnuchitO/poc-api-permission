@@ -168,6 +168,7 @@ type Transaction struct {
 var accounts = []Account{
 	{ID: "1", UserID: "user1", Name: "Account 1"},
 	{ID: "2", UserID: "user2", Name: "Account 2"},
+	{ID: "3", UserID: "user3", Name: "Account 3"},
 }
 
 var transactions = []Transaction{
@@ -195,6 +196,30 @@ func createAccount(c *gin.Context) {
 	// Add to accounts list
 	accounts = append(accounts, newAccount)
 	c.JSON(http.StatusCreated, newAccount)
+}
+
+// Get an account (only admin or the owner)
+func getUserAccount(c *gin.Context) {
+	accountID := c.Param("id")
+	userID := c.Param("userID")
+
+	var account *Account
+	for _, a := range accounts {
+		// asssume SELECT * FROM accounts WHERE ID = accountID AND UserID = userID
+		if a.ID == accountID && a.UserID == userID {
+			account = &a
+			break
+		}
+	}
+
+	if account == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		return
+	}
+
+	// No need to check if the user is the owner, as the ownerAccess middleware already does that
+
+	c.JSON(http.StatusOK, account)
 }
 
 // Get an account (only admin or the owner)
@@ -313,7 +338,7 @@ func setupRouter() *gin.Engine {
 	r.POST("/accounts", defineAccess("user:write:self"), createAccount)
 
 	r.GET("/accounts/:id", defineAccess("user:read:self"), getAccount)
-	//	r.GET("/users/:userID/accounts/:id", defineAccess("user:read:self"), ownerAccess("userID"), getUserAccount)
+	r.GET("/users/:userID/accounts/:id", defineAccess("user:read:self"), ownerAccess("userID"), getUserAccount)
 
 	r.PUT("/accounts/:id", defineAccess("user:write:self"), updateAccount)
 	r.DELETE("/accounts/:id", defineAccess("user:write:self"), deleteAccount)

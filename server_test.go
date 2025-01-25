@@ -76,6 +76,74 @@ func TestCreateAccount(t *testing.T) {
 }
 
 // Test the "get account" endpoint
+func TestGetUserAccount(t *testing.T) {
+	r := setupRouter()
+
+	tests := []struct {
+		name          string
+		userID        string
+		url           string
+		scopes        []string
+		accountID     string
+		expectedCode  int
+		expectedError string
+	}{
+		{
+			name:          "Get own account",
+			userID:        "user3",
+			url:           "/users/user3/accounts/3",
+			scopes:        []string{"user:read:self"},
+			accountID:     "3",
+			expectedCode:  http.StatusOK,
+			expectedError: "",
+		},
+		{
+			name:          "Forbidden when trying to access another user's account",
+			userID:        "user3",
+			url:           "/users/user1/accounts/1",
+			scopes:        []string{"user:read:self"},
+			accountID:     "1",
+			expectedCode:  http.StatusForbidden,
+			expectedError: "Permission denied",
+		},
+		{
+			name:          "Account not found",
+			userID:        "user4",
+			url:           "/users/user4/accounts/999",
+			scopes:        []string{"user:read:self"},
+			accountID:     "999",
+			expectedCode:  http.StatusNotFound,
+			expectedError: "Account not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a new request
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest(http.MethodGet, tt.url, nil)
+
+			// Set Authorization header with a mock token
+			req.Header.Set("Authorization", "Bearer "+generateMockJWT(tt.userID, tt.scopes))
+
+			// Perform the request
+			r.ServeHTTP(w, req)
+
+			// Assert response code
+			assert.Equal(t, tt.expectedCode, w.Code)
+
+			if tt.expectedCode != http.StatusOK {
+				// Check if the error message is present
+				var response map[string]interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Contains(t, response["error"], tt.expectedError)
+			}
+		})
+	}
+}
+
+// Test the "get account" endpoint
 func TestGetAccount(t *testing.T) {
 	r := setupRouter()
 
