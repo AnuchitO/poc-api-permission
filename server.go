@@ -66,20 +66,74 @@ func hasScope(scopes []string, requiredScope string) bool {
 	return false
 }
 
-// Authorization middleware to verify permissions at the middleware level
-func defineAccess(permissionRequired string) gin.HandlerFunc {
+func Get[T any](c *gin.Context, key string) T {
+	value, exists := c.Get(key)
+	if !exists {
+		var zero T
+		return zero
+	}
+	return value.(T)
+}
+
+const claimKey = "claims"
+
+// Middleware to extract claims from the JWT token
+func ClaimsContext() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization token missing"})
+		claims, err := extractClaimsFromToken(authHeader)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
 
-		// Extract claims from the JWT token
-		claims, err := extractClaimsFromToken(authHeader)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+		c.Set(claimKey, claims)
+		c.Next()
+	}
+}
+
+// Get claims from the context
+func GetClaims(c *gin.Context) (*Claims, bool) {
+	value, exists := c.Get(claimKey)
+	fmt.Println("GetClaims:", value)
+	if !exists {
+		return nil, false
+	}
+	return value.(*Claims), true
+}
+
+func ownerAccess(pathParam string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims, exists := GetClaims(c)
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "the claims do not exist"})
+			c.Abort()
+			return
+		}
+
+		// Extract the :id from the URL path
+		pathID := c.Param(pathParam)
+
+		// Check if the UserID from the token matches the :id path parameter
+		if claims.UserID != pathID {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
+			c.Abort()
+			return
+		}
+
+		// If the check passes, continue to the handler
+		c.Set("user_id", claims.UserID)
+		c.Next()
+	}
+}
+
+// Authorization middleware to verify permissions at the middleware level
+func defineAccess(permissionRequired string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		claims, exists := GetClaims(c)
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "the claims do not exist"})
 			c.Abort()
 			return
 		}
@@ -236,22 +290,29 @@ func deleteAccount(c *gin.Context) {
 }
 
 func main() {
-	r := gin.Default()
-
-	// Define routes with authorization checks
-
-	// Account routes - employee can only manage their own accounts
-	r.POST("/accounts", defineAccess("user:write:self"), createAccount)
-	r.GET("/accounts/:id", defineAccess("user:read:self"), getAccount)
-	r.PUT("/accounts/:id", defineAccess("user:write:self"), updateAccount)
-	r.DELETE("/accounts/:id", defineAccess("user:write:self"), deleteAccount)
-
-	// Define transactions routes - same authorization model applies
-	// Similar CRUD for transactions
+	fmt.Println("Server starting...")
+	r := setupRouter()
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8888"
 	}
+	fmt.Println("Server running on port", port)
 	r.Run(":" + port)
+}
+
+func setupRouter() *gin.Engine {
+	r := gin.Default()
+
+	r.Use(ClaimsContext())
+
+	// Define routes with authorization checks
+
+	// Account routes - employee can only manage their own accounts
+	r.POST("/accounts", defineAccess("user:write:self"), createAccount)
+	r.GET("/accounts/:id", defineAccess("user:read:self"), ownerAccess("id"), getAccount)
+	r.PUT("/accounts/:id", defineAccess("user:write:self"), updateAccount)
+	r.DELETE("/accounts/:id", defineAccess("user:write:self"), deleteAccount)
+
+	return r
 }

@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,8 +18,7 @@ func generateMockJWT(userID string, scopes []string) string {
 
 // Test the "create account" endpoint
 func TestCreateAccount(t *testing.T) {
-	r := gin.Default()
-	r.POST("/accounts", defineAccess("user:write:self"), createAccount)
+	r := setupRouter()
 
 	tests := []struct {
 		name          string
@@ -55,6 +53,8 @@ func TestCreateAccount(t *testing.T) {
 			reqBody, _ := json.Marshal(tt.payload)
 			req, _ := http.NewRequest(http.MethodPost, "/accounts", bytes.NewReader(reqBody))
 
+			// TODO :
+
 			// Set Authorization header with a mock token
 			req.Header.Set("Authorization", "Bearer "+generateMockJWT(tt.userID, tt.scopes))
 
@@ -77,8 +77,7 @@ func TestCreateAccount(t *testing.T) {
 
 // Test the "get account" endpoint
 func TestGetAccount(t *testing.T) {
-	r := gin.Default()
-	r.GET("/accounts/:id", defineAccess("user:read:self"), getAccount)
+	r := setupRouter()
 
 	tests := []struct {
 		name          string
@@ -142,8 +141,7 @@ func TestGetAccount(t *testing.T) {
 
 // Test the "update account" endpoint
 func TestUpdateAccount(t *testing.T) {
-	r := gin.Default()
-	r.PUT("/accounts/:id", defineAccess("user:write:self"), updateAccount)
+	r := setupRouter()
 
 	tests := []struct {
 		name          string
@@ -203,8 +201,7 @@ func TestUpdateAccount(t *testing.T) {
 
 // Test the "delete account" endpoint
 func TestDeleteAccount(t *testing.T) {
-	r := gin.Default()
-	r.DELETE("/accounts/:id", defineAccess("user:write:self"), deleteAccount)
+	r := setupRouter()
 
 	tests := []struct {
 		name          string
@@ -257,5 +254,3 @@ func TestDeleteAccount(t *testing.T) {
 		})
 	}
 }
-
-// Add other CRUD tests for transactions following the same pattern...
