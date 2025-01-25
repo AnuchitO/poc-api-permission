@@ -20,7 +20,7 @@ func generateMockJWT(userID string, scopes []string) string {
 // Test the "create account" endpoint
 func TestCreateAccount(t *testing.T) {
 	r := gin.Default()
-	r.POST("/accounts", authorizationMiddleware("user:write:self"), createAccount)
+	r.POST("/accounts", defineAccess("user:write:self"), createAccount)
 
 	tests := []struct {
 		name          string
@@ -78,7 +78,7 @@ func TestCreateAccount(t *testing.T) {
 // Test the "get account" endpoint
 func TestGetAccount(t *testing.T) {
 	r := gin.Default()
-	r.GET("/accounts/:id", authorizationMiddleware("user:read:self"), getAccount)
+	r.GET("/accounts/:id", defineAccess("user:read:self"), getAccount)
 
 	tests := []struct {
 		name          string
@@ -143,7 +143,7 @@ func TestGetAccount(t *testing.T) {
 // Test the "update account" endpoint
 func TestUpdateAccount(t *testing.T) {
 	r := gin.Default()
-	r.PUT("/accounts/:id", authorizationMiddleware("user:write:self"), updateAccount)
+	r.PUT("/accounts/:id", defineAccess("user:write:self"), updateAccount)
 
 	tests := []struct {
 		name          string
@@ -204,7 +204,7 @@ func TestUpdateAccount(t *testing.T) {
 // Test the "delete account" endpoint
 func TestDeleteAccount(t *testing.T) {
 	r := gin.Default()
-	r.DELETE("/accounts/:id", authorizationMiddleware("user:write:self"), deleteAccount)
+	r.DELETE("/accounts/:id", defineAccess("user:write:self"), deleteAccount)
 
 	tests := []struct {
 		name          string

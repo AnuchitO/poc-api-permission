@@ -67,7 +67,7 @@ func hasScope(scopes []string, requiredScope string) bool {
 }
 
 // Authorization middleware to verify permissions at the middleware level
-func authorizationMiddleware(permissionRequired string) gin.HandlerFunc {
+func defineAccess(permissionRequired string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
@@ -241,10 +241,10 @@ func main() {
 	// Define routes with authorization checks
 
 	// Account routes - employee can only manage their own accounts
-	r.POST("/accounts", authorizationMiddleware("user:write:self"), createAccount)
-	r.GET("/accounts/:id", authorizationMiddleware("user:read:self"), getAccount)
-	r.PUT("/accounts/:id", authorizationMiddleware("user:write:self"), updateAccount)
-	r.DELETE("/accounts/:id", authorizationMiddleware("user:write:self"), deleteAccount)
+	r.POST("/accounts", defineAccess("user:write:self"), createAccount)
+	r.GET("/accounts/:id", defineAccess("user:read:self"), getAccount)
+	r.PUT("/accounts/:id", defineAccess("user:write:self"), updateAccount)
+	r.DELETE("/accounts/:id", defineAccess("user:write:self"), deleteAccount)
 
 	// Define transactions routes - same authorization model applies
 	// Similar CRUD for transactions
