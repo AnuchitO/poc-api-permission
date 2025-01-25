@@ -217,6 +217,7 @@ func getAccount(c *gin.Context) {
 	}
 
 	// Check if the user is admin or the owner of the account
+	// ownerAccess("userID") is a middleware that checks if the user is the owner of the account
 	if account.UserID != userID {
 		c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 		return
@@ -310,7 +311,10 @@ func setupRouter() *gin.Engine {
 
 	// Account routes - employee can only manage their own accounts
 	r.POST("/accounts", defineAccess("user:write:self"), createAccount)
-	r.GET("/accounts/:id", defineAccess("user:read:self"), ownerAccess("id"), getAccount)
+
+	r.GET("/accounts/:id", defineAccess("user:read:self"), getAccount)
+	//	r.GET("/users/:userID/accounts/:id", defineAccess("user:read:self"), ownerAccess("userID"), getUserAccount)
+
 	r.PUT("/accounts/:id", defineAccess("user:write:self"), updateAccount)
 	r.DELETE("/accounts/:id", defineAccess("user:write:self"), deleteAccount)
 
