@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -214,7 +215,7 @@ func deleteAccount(c *gin.Context) {
 	var account *Account
 	for i, a := range accounts {
 		if a.ID == accountID {
-			account = &accounts[i]
+			account = &a
 			accounts = append(accounts[:i], accounts[i+1:]...)
 			break
 		}
@@ -248,5 +249,9 @@ func main() {
 	// Define transactions routes - same authorization model applies
 	// Similar CRUD for transactions
 
-	r.Run(":8888")
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8888"
+	}
+	r.Run(":" + port)
 }
