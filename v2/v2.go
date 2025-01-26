@@ -88,7 +88,7 @@ func jwtMiddleware() gin.HandlerFunc {
 }
 
 // Middleware to check role
-func defineRole(allowedRoles []Role) gin.HandlerFunc {
+func allowRoles(allow Role, mores ...Role) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, _ := c.Get("claims")
 		if claims == nil {
@@ -100,8 +100,9 @@ func defineRole(allowedRoles []Role) gin.HandlerFunc {
 		userClaims := claims.(*Claims)
 
 		// Check if the user's role matches any of the allowed roles
+		roles := append(mores, allow)
 		roleAllowed := false
-		for _, role := range allowedRoles {
+		for _, role := range roles {
 			if userClaims.Role == role {
 				roleAllowed = true
 				break
@@ -119,7 +120,7 @@ func defineRole(allowedRoles []Role) gin.HandlerFunc {
 }
 
 // Middleware to check scope
-func defineScope(allowedScopes []Scope) gin.HandlerFunc {
+func allowScopes(scope Scope, more ...Scope) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		claims, _ := c.Get("claims")
 		if claims == nil {
@@ -131,6 +132,7 @@ func defineScope(allowedScopes []Scope) gin.HandlerFunc {
 		userClaims := claims.(*Claims)
 
 		// Check if the user's scope is allowed
+		allowedScopes := append(more, scope)
 		scopeAllowed := false
 		for _, scope := range allowedScopes {
 			if scope == "user:read:self" && userClaims.UserID == c.Param("id") {
@@ -211,13 +213,13 @@ func setupRouter() *gin.Engine {
 	r.Use(jwtMiddleware())
 
 	// Define routes
-	r.GET("/api/v1/accounts", defineRole([]Role{Admin}), getAccountsHandler)
-	r.GET("/api/v1/accounts/:id", defineRole([]Role{User, Admin}), defineScope([]Scope{UserReadSelf, AdminReadAll}), getAccountByIDHandler)
+	r.GET("/api/v1/accounts", allowRoles(Admin), getAccountsHandler)
+	r.GET("/api/v1/accounts/:id", allowRoles(User, Admin), allowScopes(UserReadSelf, AdminReadAll), getAccountByIDHandler)
 
-	r.GET("/api/v1/profiles", defineRole([]Role{User, Admin}), getProfilesHandler)
-	r.GET("/api/v1/profiles/:id", defineRole([]Role{User, Admin}), defineScope([]Scope{UserReadSelf, AdminReadAll}), getProfileByIDHandler)
-	r.POST("/api/v1/profiles", defineRole([]Role{Admin}), createProfileHandler)
-	r.POST("/api/v1/accounts", defineRole([]Role{Admin}), createAccountHandler)
+	r.GET("/api/v1/profiles", allowRoles(User, Admin), getProfilesHandler)
+	r.GET("/api/v1/profiles/:id", allowRoles(User, Admin), allowScopes(UserReadSelf, AdminReadAll), getProfileByIDHandler)
+	r.POST("/api/v1/profiles", allowRoles(Admin), createProfileHandler)
+	r.POST("/api/v1/accounts", allowRoles(Admin), createAccountHandler)
 
 	return r
 }
