@@ -57,3 +57,66 @@ Meaning: Admin can read any user's profile (all as the resource).
 ### Conclusion:
 - For better flexibility, granularity, and clarity, I would recommend using specific scopes like "user:read:self" and "admin:read:all". This gives you more explicit control and ensures better clarity in defining roles and permissions.
 - For simpler cases, "self" and "all" can be useful, but remember that you'll need to pair them carefully with the user’s role to avoid ambiguity.
+
+
+
+## Priority:
+
+Role Check: Determines if the user is allowed to access any data.
+Scope Check: Further restricts access based on specific resources/actions.
+3. Conflicting Permissions
+In scenarios where conflicting permissions might arise, you need to define a clear rule for how conflicts are resolved:
+
+Priorities to Consider:
+
+Deny by Default: This is a common principle in access control. If there’s any ambiguity or conflict in permissions, deny access by default and only allow explicit permissions.
+Most Restrictive Permission: If a user has both admin:read:all and user:read:self, prioritize the more restrictive scope in some cases. For instance, an admin might have access to more data, but if there’s a resource-specific permission tied to "self", that might take precedence to ensure users can’t access others’ data.
+4. Resource Ownership and Self-Access
+Self-access permissions generally have higher importance when accessing personal data (like profiles) because it ensures privacy and compliance with data protection rules.
+
+Priority:
+
+If the scope is "self", it usually has a higher priority for user privacy, meaning users can only access their own data.
+If an admin tries to access a user’s personal data (e.g., via a "user:read:self" scope), the system should ideally deny access unless the resource is explicitly allowed for admin access.
+5. Explicit Permissions over Implicit Permissions
+If a user’s permissions are explicitly granted (e.g., through a role or scope), these permissions should always override any default or general permissions.
+
+Example:
+
+An admin role might give full access, but if you have an explicit scope check (like "user:write:self"), you still need to ensure that the action is checked.
+Priority:
+
+Explicit permissions take precedence over implicit permissions or default rules.
+Prioritization Strategy for Permissions Handling
+Role-Based Access Check (Primary Check):
+
+Admin roles generally have higher access than user roles.
+Check the user’s role to identify broad access rights (e.g., "admin:read:all", "admin:write:all").
+If the user is an admin, they likely have access to most resources.
+Scope-Based Access Check (Secondary Check):
+
+Scalable and fine-grained permissions that apply to specific actions (e.g., "user:read:self", "user:write:self").
+Self-scopes (for personal data) should be considered higher priority for privacy and data protection.
+Permission Deny (Fallback Rule):
+
+If no matching permission is found or if there’s an ambiguity in the roles/scopes, the system should deny access by default (a best practice in security).
+Example of a Permission Priority Flow
+GET /accounts (Role: Admin):
+
+Check if the role is "admin". If true, allow access.
+If not "admin", check scope (user:read:self, etc.).
+GET /profiles/:id (Role: User, Scope: user:read:self):
+
+Check if the user has "user" role. If yes, check if they’re trying to access their own profile.
+If the scope is "self", restrict access to the authenticated user's own profile only.
+GET /transactions (Role: Admin, Scope: admin:read:all):
+
+Admin role allows access, irrespective of scope restrictions.
+GET /transactions (Role: User, Scope: user:read:self):
+
+User can only read their own transactions. Admin cannot access a user's transactions without explicit permission.
+Final Priority Order
+Role-Based Access Control (RBAC) (admin > user > others)
+Scope-Based Access Control (read/write permissions for self vs. all)
+Specific Resource Access (self vs all) for personal data, with privacy protections prioritized.
+Permission Denial (Fallback Rule) if no valid permission is found.
